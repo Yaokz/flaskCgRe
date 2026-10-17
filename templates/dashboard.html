@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/axios/1.6.7/axios.min.js"></script>
+    <style>
+    /* 2. 定义样式 */
+    #my-toast {
+        position: fixed;
+        top: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: red;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        z-index: 9999;
+
+        /* 关键：默认透明且不可见 */
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease; /* 让显示/消失有动画效果 */
+    }
+
+    /* 3. 定义“显示”状态的类 */
+    #my-toast.toast-show {
+        opacity: 1;
+        visibility: visible;
+    }
+</style>
+</head>
+<body>
+<h1>欢迎</h1>
+<button id="exit" style="position: absolute;top: 20px;right: 100px;color: red;border: blue 1px solid;padding: 1px 1px" onclick="logout()">退出</button>
+<div>
+    <button  onclick="showAddApp(orderManage)">下单管理</button>
+    <div id="orderManage" style="display: none">
+        <p >编号</p>
+        <input type="text" id="taleId">
+        <button id="queryByTable" onclick="queryByTable()">查找订单</button>
+        <br>
+        <input type="text" id="dishName" placeholder="输入器械名称">
+        <button onclick="queryByOne()">查找</button>
+        <button onclick="rest1List()">重置</button>
+        <h2>器械明细</h2>
+        <ul id = dishlist></ul>
+        <p>购物车</p>
+        <ul id = orderList></ul>
+        <div id="totalAmount"></div>
+        <button id="buy" onclick="toBuy()">买单</button>
+    </div>
+</div>
+<div id="addAppar" >
+    <button onclick="showAddApp(addApp)">器械管理</button>
+    <div id="addApp" style="display:none">
+
+        <div><input type="text" id="apparName" placeholder="器械名称" ></div>
+        <div><input type="text" id="price" placeholder="价格"></div>
+        <div><input type="text" id="cost" placeholder="成本"></div>
+        <button onclick="addDish()">确认添加</button>
+    </div>
+</div>
+<div id="my-toast" class="toast-hidden">操作成功</div>
+</body>
+<script>
+    let currentUser = null
+    axios.get('/auth/session').then(res=>{
+        data =res.data
+        // document.querySelector('h1').textContent = `欢迎，${data.username}`
+        document.querySelector('h1').innerHTML = `欢迎，${data.username}`
+        currentUser = data.username
+    })
+    loaddishlist()
+    // orderList()
+
+    function loaddishlist(){
+        const dishlist = document.querySelector('#dishlist')
+
+        axios.get('/dishes/query/dishes_list').then(
+            res=>{data =res.data
+                dishlist.innerHTML = ''
+                data.dishlist.forEach(dish => {
+                    dishlist.innerHTML += `
+                <li>
+                    ${dish.name}--${dish.price}
+                    <input type="text" id = "${dish.id}-count" min="1" value="1" style="width: 20px">
+                    <button onclick="toOrder(${dish.id})">下单</button>
+                </li>`
+
+                })
+
+            }
+        )
+    }
+
+    function orderList(){
+        tableId = document.getElementById("taleId").value
+        const totalEl = document.querySelector('#totalAmount')
+         const orderlist= document.querySelector('#orderList')
+        axios.get(`/dishes/query/dishes_list/${tableId}`).then(
+            res=>{
+                data =res.data
+                if(!res.data.success){
+                    orderlist.innerHTML = ''
+                    totalEl.innerHTML = ''
+                    alert(data.message)
+                    return
+
+                }
+                orderlist.innerHTML = ''
+                data.dishlist.forEach(dish => {
+                    orderlist.innerHTML += `
+                    <li>
+                    ${dish.dish_name}-${dish.price}
+                    <input type="text" min="1" max="1" value="1" style="width: 20px">
+                    <button onclick="deleteDish(${dish.id})">删除</button>
+                    </li>`
+                })
+                // orderlist.innerHTML += `${data.amount}`
+                totalEl.textContent = `总价为：${data.amount}`
+
+            }
+        )
+    }
+
+    function toOrder(dishId){
+        const  tableId = document.getElementById("taleId").value
+        const count = document.getElementById(`${dishId}-count`).value
+        axios.post('/orders/dishes_order', {
+            dishId: dishId,
+            count: count,
+            tableId: tableId
+        }).then(res=>{
+            data =res.data
+            if (data.success){orderList()}
+            else {
+                alert(data.message)
+            }
+
+        })
+    }
+
+    function deleteDish(orderItemId){
+        axios.delete('/dishes/delete',{params:{orderItemId:orderItemId}}).then(res=>{
+            data =res.data
+            orderList()
+
+
+        })
+    }
+
+    function showAddApp(menu){
+        // const form = document.getElementById("menu")
+        if (menu.style.display === 'none'){
+            menu.style.display = 'block'
+        }
+        else
+            menu.style.display = 'none'
+
+    }
+
+    function addDish(){
+        const dishNameInput = document.getElementById("apparName")
+        const priceInput = document.getElementById("price")
+        const costInput = document.getElementById("cost")
+        const dishName = dishNameInput.value
+        const price = priceInput.value
+        const cost = costInput.value
+
+
+        if (!dishName || !price || !cost) {
+            alert("不能为空")
+            return;
+        }
+        axios.post('/dishes/addDish', {dishName: dishName, price: price, cost: cost}).then(res=>{
+
+            data =res.data
+            if (data.success){
+                // alert(data.message)
+                showToast(data.message)
+                dishNameInput.value = ''
+                priceInput.value = ''
+                costInput.value = ''
+                dishNameInput.focus()
+            }
+
+        })
+
+
+    }
+
+    function queryByOne(){
+        const dishName = document.getElementById("dishName").value.trim()
+        if (!dishName){
+            alert("请输入名称")
+            return;
+
+        }
+        const dishList= document.querySelector('#dishlist')
+        document.querySelector('#dishName').value = ''
+        axios.get(`/dishes/query/dish_one/${dishName}`).then(res=>{
+            data =res.data
+            if (data.success){
+                dishList.innerHTML = ''
+                dishList.innerHTML += `
+                <li>
+                ${data.data.name}--${data.data.price}
+                <input type="text" id = "${data.data.id}-count" min="1" value="1" style="width: 20px">
+                <button onclick="toOrder(${data.data.id})">下单</button>
+                </li>
+                `
+            }
+            else
+                alert(data.message)
+        })
+
+    }
+
+    function rest1List(){
+        loaddishlist()
+    }
+
+
+    function showToast(message){
+        const toast = document.getElementById("my-toast")
+        toast.innerText = message;
+        toast.classList.add("toast-show")
+
+
+        setTimeout(() => {
+        toast.classList.remove("toast-show");
+    }, 2000); // 2000毫秒 = 2秒
+
+    }
+
+    function logout(){
+        axios.post('/auth/logout',{}).then(res=>{
+
+            if (res.data.success){
+                window.location.href="/"
+            }
+        })
+    }
+
+    function toBuy(){
+        const tableId = document.getElementById("taleId").value
+        axios.post('/orders/buy',{tableId:tableId}).then(res=>{
+            data =res.data
+            if (data.success){
+                showToast(data.message)
+            }
+            else {
+                showToast(data.message)
+            }
+
+
+        })
+
+    }
+
+    function queryByTable(){
+        orderList()
+    }
+</script>
+</html>

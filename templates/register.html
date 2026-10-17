@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>注册页面</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/axios/1.6.7/axios.min.js"></script>
+</head>
+<body>
+<input type="text" id="userName" placeholder="用户名">
+<br>
+<input type="text" id="age" placeholder="年龄">
+<br>
+<input type="password" id="password" placeholder="密码">
+<br>
+<button onclick="register()">提交</button>
+
+
+<script>
+    function register(){
+        userName = document.getElementById('userName').value
+        age = document.getElementById('age').value
+        userPassword = document.getElementById('password').value
+        axios.post('/auth/register/addUser',{userName:userName,password:userPassword,age:age})
+            .then(res=>{
+                data = res.data
+                alert(data.message)
+            })
+
+
+    }
+
+
+
+</script>
+
+</body>
+</html>

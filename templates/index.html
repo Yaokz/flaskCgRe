@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>下单系统</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/axios/1.6.7/axios.min.js"></script>
+</head>
+<body>
+<h2>ais下单系统</h2>
+<p>用户名</p>
+<input id="username" type="text" placeholder="输入用户名"  style="margin: 0 auto;"/>
+<!--<input type="text" placeholder="输入用户名" style="display: block; margin: 0 auto;"/>-->
+<p>密码</p>
+<input id="password" type="password" placeholder="请输入密码">
+<br>
+<br>
+<button onclick="login()">登录</button>
+<button onclick="register()">注册</button>
+</body>
+
+<script>
+    function login(){
+        username = document.getElementById('username').value
+        password = document.getElementById('password').value
+        axios.get('/auth/login',{params:{username:username,password:password}}).then(res=>{
+            data = res.data
+            if (data.success){
+                // alert(data.message)
+                window.location.href="/dashboard"
+            }
+            else {
+                alert(data.message)
+            }
+        })
+    }
+    function register(){
+
+        window.location.href="/auth/register"
+    }
+</script>
+</html>
